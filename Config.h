@@ -103,7 +103,11 @@
                                           //         n = (stepper_steps * micro_steps * overall_gear_reduction)/360.0
 #define AXIS2_REVERSE                 OFF //    OFF, ON Reverses movement direction, or reverse wiring instead to correct.   <-Often
 #define AXIS2_LIMIT_MIN               -90 //    -90, n. Where n=-90..0 (degrees.) Minimum allowed Declination or Altitude.    Infreq
+                                          //         FORK: DEC (mechanical axis limit), GEM: DEC (sky coordinate), ALTAZM: Altitude
+                                          //         Note: Runtime horizon/overhead limits (:Sh/:So) differ: FORK overhead uses DEC, others use altitude
 #define AXIS2_LIMIT_MAX                90 //     90, n. Where n=0..90 (degrees.) Maximum allowed Declination or Altitude.     Infreq
+                                          //         FORK: DEC (mechanical axis limit), GEM: DEC (sky coordinate), ALTAZM: Altitude
+                                          //         Note: Runtime horizon/overhead limits (:Sh/:So) differ: FORK overhead uses DEC, others use altitude
 
 #define AXIS2_DRIVER_MICROSTEPS         16 //    OFF, n. Microstep mode when tracking.                                        <-Req'd
 #define AXIS2_DRIVER_MICROSTEPS_GOTO  OFF //    OFF, n. Microstep mode used during slews. OFF uses _DRIVER_MICROSTEPS.        Option
@@ -173,6 +177,10 @@
 #define GUIDE_DISABLE_BACKLASH        OFF //    OFF, Disable backlash takeup during guiding at <= 1X.                         Option
 
 // LIMITS ------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#LIMITS
+// Runtime horizon/overhead limits (:Sh/:So commands): 
+//   - Horizon limit (:Sh): Always altitude-based for all mount types (no change)
+//   - Overhead limit (:So): FORK mounts use DEC space (mechanical limit, 0-90°), 
+//                           GEM/ALTAZM mounts use altitude space (60-90°, unchanged)
 #define LIMIT_SENSE                   OFF //    OFF, HIGH or LOW state on limit sense switch stops movement.                  Option
 #define LIMIT_STRICT                  OFF //    OFF, disables limits until unpark goto or sync. ON enables limits at startup. Option
                                           //         note that ON also disables all motion until date/time are set.
@@ -185,10 +193,16 @@
 
 // Compile-time Park Position (HA/DEC) -------------------------------------------------------------------------------
 // When enabled, sets park position from these values on boot ONLY if no park is saved yet, or after NV reset/defaults
+// For FORK/GEM mounts: HA/DEC coordinates. For ALTAZM mounts: use Altitude/Azimuth commands at runtime.
 #define PARK_FROM_CONFIG                ON //    OFF, ON Apply compile-time park if NV park not saved or after NV reset       Option
 #define PARK_HA_DEG                    0.0 //    0.0, n. Hour Angle in degrees (positive west, negative east)                Option
+                                          //         FORK/GEM: Hour Angle, ALTAZM: not used (set park via :hQ# command)
 #define PARK_DEC_DEG                 -90.0 //  -90.0, n. Declination in degrees                                             Option
+                                          //         FORK: DEC as mechanical coordinate (-90° = into wedge)
+                                          //         GEM: DEC as sky coordinate (standard behavior)
+                                          //         ALTAZM: not used (use runtime commands)
 #define PARK_PIER_SIDE       PIER_SIDE_EAST //  PIER_SIDE_EAST or PIER_SIDE_WEST                                            Option
+                                          //         FORK/GEM only: pier side for park position
 
 // PEC ------------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#PEC
 #define PEC_STEPS_PER_WORM_ROTATION     0 //      0, n. Steps per worm rotation (0 disables else 720 sec buffer allocated.)  <-Req'd
