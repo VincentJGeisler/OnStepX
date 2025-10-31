@@ -170,15 +170,18 @@ CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, boo
 
   #if AXIS2_TANGENT_ARM == OFF
     if (transform.isEquatorial()) {
-      if (flt(coords->d, axis2.getLimitMin())) {
-        VF("MSG: Mount, validate failed Dec past min limit by ");
-        V(radToDeg(coords->d - axis2.getLimitMin())*3600.0); VLF(" arc-secs");
-        return CE_SLEW_ERR_OUTSIDE_LIMITS;
-      }
-      if (fgt(coords->d, axis2.getLimitMax())) {
-        VF("MSG: Mount, validate failed Dec past max limit by ");
-        V(radToDeg(coords->d - axis2.getLimitMax())*3600.0); VLF(" arc-secs");
-        return CE_SLEW_ERR_OUTSIDE_LIMITS;
+      // For FORK mounts, relax Dec limit enforcement to allow full mechanical range
+      if (transform.mountType != FORK) {
+        if (flt(coords->d, axis2.getLimitMin())) {
+          VF("MSG: Mount, validate failed Dec past min limit by ");
+          V(radToDeg(coords->d - axis2.getLimitMin())*3600.0); VLF(" arc-secs");
+          return CE_SLEW_ERR_OUTSIDE_LIMITS;
+        }
+        if (fgt(coords->d, axis2.getLimitMax())) {
+          VF("MSG: Mount, validate failed Dec past max limit by ");
+          V(radToDeg(coords->d - axis2.getLimitMax())*3600.0); VLF(" arc-secs");
+          return CE_SLEW_ERR_OUTSIDE_LIMITS;
+        }
       }
     }
   #endif

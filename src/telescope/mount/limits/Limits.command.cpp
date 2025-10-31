@@ -56,7 +56,8 @@ bool Limits::command(char *reply, char *command, char *parameter, bool *supressF
     if (command[1] == 'h') {
       int16_t deg;
       if (convert.atoi2(parameter, &deg)) {
-        if (deg >= -30.0F && deg <= 30.0F) {
+        // Allow wider horizon limits on FORK mounts to support parking below horizon
+        if ((MOUNT_TYPE == FORK && deg >= -90.0F && deg <= 30.0F) || (deg >= -30.0F && deg <= 30.0F)) {
           settings.altitude.min = degToRadF(deg);
           nv.updateBytes(NV_MOUNT_LIMITS_BASE, &settings, sizeof(LimitSettings));
         } else *commandError = CE_PARAM_RANGE;
@@ -70,7 +71,8 @@ bool Limits::command(char *reply, char *command, char *parameter, bool *supressF
     if (command[1] == 'o') {
       int16_t deg;
       if (convert.atoi2(parameter, &deg)) {
-        if (deg >= 60.0F && deg <= 90.0F) {
+        // Overhead: allow wider range for FORK mounts; overhead is in altitude space
+        if ((MOUNT_TYPE == FORK && deg >= 0.0F && deg <= 180.0F) || (deg >= 60.0F && deg <= 90.0F)) {
           settings.altitude.max = degToRadF(deg);
           nv.updateBytes(NV_MOUNT_LIMITS_BASE, &settings, sizeof(LimitSettings));
         } else *commandError = CE_PARAM_RANGE;

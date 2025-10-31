@@ -21,6 +21,8 @@ void Park::init() {
   // confirm the data structure size
   if (ParkSettingsSize < sizeof(ParkSettings)) { nv.initError = true; DL("ERR: Park::Init(), ParkSettingsSize error"); }
 
+  bool nvWasReset = false;
+
   // write the default settings to NV
   if (!nv.hasValidKey() || nv.isNull(NV_MOUNT_PARK_BASE, sizeof(ParkSettings))) {
     VLF("MSG: Mount, park writing defaults to NV");
@@ -28,11 +30,24 @@ void Park::init() {
     // set the initial park position at home
     state = settings.state;
     set();
+    nvWasReset = true;
   }
 
   // read the settings
   nv.readBytes(NV_MOUNT_PARK_BASE, &settings, sizeof(ParkSettings));
   state = settings.state;
+
+  // Optionally set park from compile-time config if none saved yet or after NV reset/defaults
+  #if PARK_FROM_CONFIG == ON
+    if (!settings.saved || nvWasReset) {
+      VLF("MSG: Mount, applying park from Config.h");
+      settings.position.h = degToRadF(PARK_HA_DEG);
+      settings.position.d = degToRadF(PARK_DEC_DEG);
+      settings.position.pierSide = PARK_PIER_SIDE;
+      settings.saved = true;
+      nv.updateBytes(NV_MOUNT_PARK_BASE, &settings, sizeof(ParkSettings));
+    }
+  #endif
 
   // configure any associated sense/signal pins
   #if (PARK_SENSE) != OFF && (PARK_SENSE_PIN) != OFF
