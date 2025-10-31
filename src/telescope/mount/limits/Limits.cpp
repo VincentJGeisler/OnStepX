@@ -66,7 +66,12 @@ CommandError Limits::validateTarget(Coordinate *coords, bool isGoto) {
 // target coordinate check ahead of sync, goto, etc.
 CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, bool *westReachable, double *eastCorrection, double *westCorrection, bool isGoto) {
   if (flt(coords->a, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
-  if (fgt(coords->a, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  // For FORK mounts, overhead limit is in DEC space (mechanical limit), not altitude space
+  if (transform.mountType == FORK && transform.isEquatorial()) {
+    if (fgt(coords->d, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  } else {
+    if (fgt(coords->a, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  }
 
   double a1e, a2e, a1w, a2w;
 
@@ -291,8 +296,13 @@ void Limits::poll() {
   if (limitsEnabled && guide.state != GU_HOME_GUIDE && guide.state != GU_HOME_GUIDE_ABORT) {
     // overhead and horizon limits
     if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+    // For FORK mounts, overhead limit is in DEC space (mechanical limit), not altitude space
     if (fabs(settings.altitude.max - Deg90) > OneArcSec) {
-      if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      if (transform.mountType == FORK && transform.isEquatorial()) {
+        if (current.d > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      } else {
+        if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      }
     } else error.altitude.max = false;
 
     // meridian limits
