@@ -95,6 +95,11 @@ void Mount::begin() {
   library.init();
   park.init();
 
+  // enable limits if mount is unparked (prevents tracking lockout after power cycle)
+  #if GOTO_FEATURE == ON
+    if (park.state == PS_UNPARKED) limits.enabled(true);
+  #endif
+
   #if AXIS1_PEC == ON
     pec.init();
   #endif
