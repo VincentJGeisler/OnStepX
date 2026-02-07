@@ -6,6 +6,7 @@
 #include "../lib/tasks/OnTask.h"
 #include "../lib/gpioEx/GpioEx.h"
 #include "../lib/nv/Nv.h"
+#include "../lib/analog/Analog.h"
 #include "../lib/convert/Convert.h"
 #include "../lib/canPlus/CanPlus.h"
 
@@ -131,6 +132,10 @@ void Telescope::init(const char *fwName, int fwMajor, int fwMinor, const char *f
     }
   } else { VLF("MSG: NV, correct key found"); }
 
+  #if RETICLE_LED_DEFAULT >= 0 && RETICLE_LED_PIN != OFF
+    analog.pwmInit(RETICLE_LED_DEFAULT);
+  #endif
+
   #ifdef USES_HW_SPI
     SPI.begin();
   #endif
@@ -182,12 +187,16 @@ void Telescope::init(const char *fwName, int fwMajor, int fwMinor, const char *f
     mountStatus.soundStartupMelody();
   #endif
 
-  #ifdef ROTATOR_PRESENT
+  #if defined(ROTATOR_PRESENT) || defined(ROTATOR_CLIENT_PRESENT)
     rotator.init();
   #endif
 
-  #ifdef FOCUSER_PRESENT
+  #if defined(FOCUSER_PRESENT) || defined(FOCUSER_CLIENT_PRESENT)
     focuser.init();
+  #endif
+
+  #if defined(FEATURES_PRESENT) || defined(FEATURES_CLIENT_PRESENT)
+    features.init();
   #endif
 
   delay(1000);
@@ -206,16 +215,16 @@ void Telescope::init(const char *fwName, int fwMajor, int fwMinor, const char *f
     mount.begin();
   #endif
 
-  #ifdef ROTATOR_PRESENT
+  #if defined(ROTATOR_PRESENT) || defined(ROTATOR_CLIENT_PRESENT)
     rotator.begin();
   #endif
 
-  #ifdef FOCUSER_PRESENT
+  #if defined(FOCUSER_PRESENT) || defined(FOCUSER_CLIENT_PRESENT)
     focuser.begin();
   #endif
 
-  #ifdef FEATURES_PRESENT
-    features.init();
+  #if defined(FEATURES_PRESENT) || defined(FEATURES_CLIENT_PRESENT)
+    features.begin();
   #endif
 
   // write the default settings to NV
@@ -240,7 +249,9 @@ void Telescope::init(const char *fwName, int fwMajor, int fwMinor, const char *f
     #endif
 
     pinMode(RETICLE_LED_PIN, OUTPUT);
-    analogWrite(RETICLE_LED_PIN, analog8BitToAnalogRange(reticleBrightness));
+
+    float duty = (float)reticleBrightness*(1.0F/255.0F);
+    analog.write(RETICLE_LED_PIN, RETICLE_LED_INVERT == ON ? duty : 1.0F - duty);
   #endif
 
   // bring up status LED and flash error codes

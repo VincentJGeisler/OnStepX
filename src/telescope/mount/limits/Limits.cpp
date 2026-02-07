@@ -280,8 +280,7 @@ void Limits::stopAxis2(GuideAction stopDirection) {
 }
 
 void Limits::poll() {
-  static int autoFlipDelayCycles = 0;
-  if (autoFlipDelayCycles > 0) autoFlipDelayCycles--;
+  if (limitsDisablePeriodDs > 0) limitsDisablePeriodDs--;
 
   LimitsError lastError = error;
 
@@ -296,7 +295,17 @@ void Limits::poll() {
 
   if (limitsEnabled && guide.state != GU_HOME_GUIDE && guide.state != GU_HOME_GUIDE_ABORT) {
     // overhead and horizon limits
-    if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+    // For FORK mounts, horizon limit is in DEC space (mechanical limit), not altitude space
+    if (limitsDisablePeriodDs == 0) {
+      if (transform.mountType == FORK && transform.isEquatorial()) {
+        if (current.d < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+      } else {
+        if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+      }
+    } else {
+      error.altitude.min = false;
+    }
+
     // For FORK mounts, overhead limit is in DEC space (mechanical limit), not altitude space
     if (fabs(settings.altitude.max - Deg90) > OneArcSec) {
       if (transform.mountType == FORK && transform.isEquatorial()) {
@@ -315,11 +324,10 @@ void Limits::poll() {
     } else error.meridian.east = false;
 
     if (transform.mountType == GEM && current.pierSide == PIER_SIDE_WEST) {
-      if (current.h > settings.pastMeridianW && autoFlipDelayCycles == 0) {
+      if (current.h > settings.pastMeridianW && limitsDisablePeriodDs == 0) {
         #if GOTO_FEATURE == ON && AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
           if (goTo.isAutoFlipEnabled() && mount.isTracking()) {
-            // disable this limit for a second to allow goto to exit the out of limits region
-            autoFlipDelayCycles = 10;
+            limitsDisablePeriod(1.0F);
             VLF("MSG: Mount, start automatic meridian flip");
             Coordinate target = mount.getMountPosition();
             CommandError e = goTo.request(target, PSS_EAST_ONLY, false);
@@ -361,11 +369,10 @@ void Limits::poll() {
       // ---------------------------------------------------------
     } else error.limit.axis1.min = false;
 
-    if (fgt(current.a1, axis1.getLimitMax()) && autoFlipDelayCycles == 0) {
+    if (fgt(current.a1, axis1.getLimitMax()) && limitsDisablePeriodDs == 0) {
       #if GOTO_FEATURE == ON && AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
         if (current.pierSide == PIER_SIDE_EAST && goTo.isAutoFlipEnabled() && mount.isTracking()) {
-          // disable this limit for a second to allow goto to exit the out of limits region
-          autoFlipDelayCycles = 10;
+          limitsDisablePeriod(1.0F);
           VLF("MSG: Mount, start automatic meridian flip");
           Coordinate target = mount.getMountPosition();
           CommandError e = goTo.request(target, PSS_WEST_ONLY, false);
