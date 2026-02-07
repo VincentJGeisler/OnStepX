@@ -179,6 +179,7 @@ void Telescope::init(const char *fwName, int fwMajor, int fwMinor, const char *f
     #endif
     mount.init();
     mountStatus.init();
+    mountStatus.soundStartupMelody();
   #endif
 
   #ifdef ROTATOR_PRESENT

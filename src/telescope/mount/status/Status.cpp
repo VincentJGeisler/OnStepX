@@ -94,6 +94,37 @@ void Status::general() {
   #endif
 }
 
+// play startup melody
+void Status::soundStartupMelody() {
+  #if STATUS_BUZZER_STARTUP_MELODY == ON
+    #if STATUS_BUZZER != OFF && STATUS_BUZZER_PIN != OFF
+      wake(); // ensure buzzer is initialized
+      // Only play melody if frequency-based buzzer is configured (STATUS_BUZZER >= 0)
+      // Simple on/off buzzer (STATUS_BUZZER == ON) cannot play different frequencies
+      #if STATUS_BUZZER >= 0
+        // Configurable 3-note startup melody
+        // Play regardless of sound.enabled state as it's a startup indicator
+        tone(STATUS_BUZZER_PIN, STATUS_BUZZER_MELODY_NOTE1, STATUS_BUZZER_MELODY_DURATION1);
+        delay(STATUS_BUZZER_MELODY_DELAY);
+        tone(STATUS_BUZZER_PIN, STATUS_BUZZER_MELODY_NOTE2, STATUS_BUZZER_MELODY_DURATION2);
+        delay(STATUS_BUZZER_MELODY_DELAY);
+        tone(STATUS_BUZZER_PIN, STATUS_BUZZER_MELODY_NOTE3, STATUS_BUZZER_MELODY_DURATION3);
+        delay(STATUS_BUZZER_MELODY_DELAY);
+        noTone(STATUS_BUZZER_PIN);
+      #elif STATUS_BUZZER == ON
+        // For simple on/off buzzer, play 3 short beeps instead
+        // Play regardless of sound.enabled state as it's a startup indicator
+        for (int i = 0; i < 3; i++) {
+          digitalWriteEx(STATUS_BUZZER_PIN, STATUS_BUZZER_ON_STATE);
+          delay(100);
+          digitalWriteEx(STATUS_BUZZER_PIN, !STATUS_BUZZER_ON_STATE);
+          delay(100);
+        }
+      #endif
+    #endif
+  #endif
+}
+
 Status mountStatus;
 
 #endif

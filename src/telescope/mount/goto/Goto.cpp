@@ -224,7 +224,18 @@ CommandError Goto::setTarget(Coordinate *coords, PierSideSelect pierSideSelect, 
     mount.enable(true);
     e = validate();
   }
-  if (e == CE_NONE && isGoto && limits.isAboveOverhead()) e = CE_SLEW_ERR_OUTSIDE_LIMITS;
+  if (e == CE_NONE && isGoto) {
+    // For FORK mounts, check if currently outside DEC limits
+    if (transform.mountType == FORK && transform.isEquatorial()) {
+      Coordinate current = mount.getMountPosition(CR_MOUNT);
+      // Only block goto if moving further outside limits
+      if (limits.isAboveOverhead() && coords->d > current.d) e = CE_SLEW_ERR_OUTSIDE_LIMITS;
+      if (current.d < limits.settings.altitude.min && coords->d < current.d) e = CE_SLEW_ERR_OUTSIDE_LIMITS;
+    } else {
+      // For other mounts, block any goto if currently above overhead
+      if (limits.isAboveOverhead()) e = CE_SLEW_ERR_OUTSIDE_LIMITS;
+    }
+  }
   if (e != CE_NONE) return e;
 
   target = *coords;

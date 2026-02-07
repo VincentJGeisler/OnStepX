@@ -10,6 +10,9 @@
  * ADJUST THE FOLLOWING TO CONFIGURE YOUR CONTROLLER FEATURES ----------------------------------------------------------------------
  * <-Req'd = always must set, <-Often = usually must set, Option = optional, Adjust = adjust as req'd, Infreq = infrequently changed
 */
+
+// DEVELOPMENT VERSION - Last modified: February 6, 2026
+
 //      Parameter Name              Value   Default  Notes                                                                      Hint
 
 // =================================================================================================================================
@@ -159,9 +162,17 @@
 
 // STATUS ------------------------------------------------------ see https://onstep.groups.io/g/main/wiki/Configuration_Mount#STATUS
 #define STATUS_MOUNT_LED              OFF //    OFF, ON Flashes proportional to rate of movement or solid on for slews.       Option
-#define STATUS_BUZZER                  ON //    OFF, ON, n. Where n=100..6000 (Hz freq.) for speaker. ON for piezo buzzer.    Option
+#define STATUS_BUZZER                  2000 //    OFF, ON, n. Where n=100..6000 (Hz freq.) for speaker. ON for piezo buzzer.    Option
 #define STATUS_BUZZER_DEFAULT         OFF //    OFF, ON starts w/buzzer sound enabled.                                        Option
-#define STATUS_BUZZER_MEMORY          OFF //    OFF, ON to remember buzzer sound setting across power cycles.                 Option
+#define STATUS_BUZZER_MEMORY          ON //    OFF, ON to remember buzzer sound setting across power cycles.                 Option
+#define STATUS_BUZZER_STARTUP_MELODY  ON //    OFF, ON plays a startup melody on boot (frequency buzzer only, beeps for simple) Option
+#define STATUS_BUZZER_MELODY_NOTE1    262 //    n. Frequency (Hz) for first note. Common: C4=262, D4=294, E4=330, F4=349, G4=392, A4=440, B4=494 Option
+#define STATUS_BUZZER_MELODY_NOTE2    330 //    n. Frequency (Hz) for second note.                                                      Option
+#define STATUS_BUZZER_MELODY_NOTE3    392 //    n. Frequency (Hz) for third note.                                                       Option
+#define STATUS_BUZZER_MELODY_DURATION1 150 //    n. Duration (ms) for first note.                                                         Option
+#define STATUS_BUZZER_MELODY_DURATION2 150 //    n. Duration (ms) for second note.                                                        Option
+#define STATUS_BUZZER_MELODY_DURATION3 200 //    n. Duration (ms) for third note.                                                         Option
+#define STATUS_BUZZER_MELODY_DELAY    160 //    n. Delay (ms) between notes.                                                              Option
 
 // ST4 INTERFACE -------------------------------------------------- see https://onstep.groups.io/g/main/wiki/Configuration_Mount#ST4
 // *** It is up to you to verify the interface meets the electrical specifications of any connected device, use at your own risk ***
@@ -197,8 +208,8 @@
 #define PARK_FROM_CONFIG                ON //    OFF, ON Apply compile-time park if NV park not saved or after NV reset       Option
 #define PARK_HA_DEG                    0.0 //    0.0, n. Hour Angle in degrees (positive west, negative east)                Option
                                           //         FORK/GEM: Hour Angle, ALTAZM: not used (set park via :hQ# command)
-#define PARK_DEC_DEG                 -90.0 //  -90.0, n. Declination in degrees                                             Option
-                                          //         FORK: DEC as mechanical coordinate (-90° = into wedge)
+#define PARK_DEC_DEG                 -89.0 //  -89.0, n. Declination in degrees                                             Option
+                                          //         FORK: DEC as mechanical coordinate (-90° = into wedge, -89° avoids singularity)
                                           //         GEM: DEC as sky coordinate (standard behavior)
                                           //         ALTAZM: not used (use runtime commands)
 #define PARK_PIER_SIDE       PIER_SIDE_EAST //  PIER_SIDE_EAST or PIER_SIDE_WEST                                            Option

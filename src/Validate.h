@@ -377,6 +377,34 @@
   #error "Configuration (Config.h): Setting STATUS_BUZZER_MEMORY unknown, use OFF or ON."
 #endif
 
+#if STATUS_BUZZER_STARTUP_MELODY != ON && STATUS_BUZZER_STARTUP_MELODY != OFF
+  #error "Configuration (Config.h): Setting STATUS_BUZZER_STARTUP_MELODY unknown, use OFF or ON."
+#endif
+
+#if STATUS_BUZZER_STARTUP_MELODY == ON
+  #if STATUS_BUZZER_MELODY_NOTE1 < 100 || STATUS_BUZZER_MELODY_NOTE1 > 6000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_NOTE1 out of range, use 100 to 6000 (Hz.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_NOTE2 < 100 || STATUS_BUZZER_MELODY_NOTE2 > 6000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_NOTE2 out of range, use 100 to 6000 (Hz.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_NOTE3 < 100 || STATUS_BUZZER_MELODY_NOTE3 > 6000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_NOTE3 out of range, use 100 to 6000 (Hz.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_DURATION1 < 10 || STATUS_BUZZER_MELODY_DURATION1 > 5000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_DURATION1 out of range, use 10 to 5000 (ms.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_DURATION2 < 10 || STATUS_BUZZER_MELODY_DURATION2 > 5000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_DURATION2 out of range, use 10 to 5000 (ms.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_DURATION3 < 10 || STATUS_BUZZER_MELODY_DURATION3 > 5000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_DURATION3 out of range, use 10 to 5000 (ms.)"
+  #endif
+  #if STATUS_BUZZER_MELODY_DELAY < 0 || STATUS_BUZZER_MELODY_DELAY > 5000
+    #error "Configuration (Config.h): Setting STATUS_BUZZER_MELODY_DELAY out of range, use 0 to 5000 (ms.)"
+  #endif
+#endif
+
 // ST4 INTERFACE
 #if ST4_INTERFACE != ON && ST4_INTERFACE != OFF
   #error "Configuration (Config.h): Setting ST4_INTERFACE unknown, use OFF or ON."

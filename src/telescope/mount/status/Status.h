@@ -32,6 +32,7 @@ class Status {
     inline void soundBeep() { if (sound.enabled) wake(); sound.beep(); }
     inline void soundClick() { if (sound.enabled) wake(); sound.click(); }
     inline void soundToggleEnable() { sound.enabled = !sound.enabled; }
+    void soundStartupMelody();
 
   private:
     uint8_t statusTaskHandle = 0;

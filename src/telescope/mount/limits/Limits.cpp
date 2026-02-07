@@ -65,11 +65,12 @@ CommandError Limits::validateTarget(Coordinate *coords, bool isGoto) {
 
 // target coordinate check ahead of sync, goto, etc.
 CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, bool *westReachable, double *eastCorrection, double *westCorrection, bool isGoto) {
-  if (flt(coords->a, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
-  // For FORK mounts, overhead limit is in DEC space (mechanical limit), not altitude space
+  // For FORK mounts, horizon and overhead limits are in DEC space (mechanical limits), not altitude space
   if (transform.mountType == FORK && transform.isEquatorial()) {
+    if (flt(coords->d, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
     if (fgt(coords->d, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
   } else {
+    if (flt(coords->a, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
     if (fgt(coords->a, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
   }
 
@@ -463,7 +464,12 @@ void Limits::poll() {
   if (transform.mountType == ALTAZM) {
     if (error.altitude.min) stopAxis2(GA_REVERSE);
     if (error.altitude.max) stopAxis2(GA_FORWARD);
+  } else if (transform.mountType == FORK && transform.isEquatorial()) {
+    // For FORK mounts, allow movement away from DEC limits
+    if (error.altitude.min) stopAxis2(GA_REVERSE);  // Stop moving toward more negative DEC
+    if (error.altitude.max) stopAxis2(GA_FORWARD);  // Stop moving toward more positive DEC
   } else {
+    // For GEM mounts, stop all movement when hitting altitude limits
     if (!lastError.altitude.min && error.altitude.min) stop();
     if (!lastError.altitude.max && error.altitude.max) stop();
   }
