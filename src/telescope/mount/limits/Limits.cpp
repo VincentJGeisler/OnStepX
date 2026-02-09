@@ -65,8 +65,14 @@ CommandError Limits::validateTarget(Coordinate *coords, bool isGoto) {
 
 // target coordinate check ahead of sync, goto, etc.
 CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, bool *westReachable, double *eastCorrection, double *westCorrection, bool isGoto) {
-  if (flt(coords->a, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
-  if (fgt(coords->a, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  // For FORK mounts, horizon and overhead limits are in DEC space (mechanical limits), not altitude space
+  if (transform.mountType == FORK && transform.isEquatorial()) {
+    if (flt(coords->d, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
+    if (fgt(coords->d, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  } else {
+    if (flt(coords->a, settings.altitude.min)) return CE_SLEW_ERR_BELOW_HORIZON;
+    if (fgt(coords->a, settings.altitude.max)) return CE_SLEW_ERR_ABOVE_OVERHEAD;
+  }
 
   double a1e, a2e, a1w, a2w;
 
@@ -170,15 +176,18 @@ CommandError Limits::validateTarget(Coordinate *coords, bool *eastReachable, boo
 
   #if AXIS2_TANGENT_ARM == OFF
     if (transform.isEquatorial()) {
-      if (flt(coords->d, axis2.getLimitMin())) {
-        VF("MSG: Mount, validate failed Dec past min limit by ");
-        V(radToDeg(coords->d - axis2.getLimitMin())*3600.0); VLF(" arc-secs");
-        return CE_SLEW_ERR_OUTSIDE_LIMITS;
-      }
-      if (fgt(coords->d, axis2.getLimitMax())) {
-        VF("MSG: Mount, validate failed Dec past max limit by ");
-        V(radToDeg(coords->d - axis2.getLimitMax())*3600.0); VLF(" arc-secs");
-        return CE_SLEW_ERR_OUTSIDE_LIMITS;
+      // For FORK mounts, relax Dec limit enforcement to allow full mechanical range
+      if (transform.mountType != FORK) {
+        if (flt(coords->d, axis2.getLimitMin())) {
+          VF("MSG: Mount, validate failed Dec past min limit by ");
+          V(radToDeg(coords->d - axis2.getLimitMin())*3600.0); VLF(" arc-secs");
+          return CE_SLEW_ERR_OUTSIDE_LIMITS;
+        }
+        if (fgt(coords->d, axis2.getLimitMax())) {
+          VF("MSG: Mount, validate failed Dec past max limit by ");
+          V(radToDeg(coords->d - axis2.getLimitMax())*3600.0); VLF(" arc-secs");
+          return CE_SLEW_ERR_OUTSIDE_LIMITS;
+        }
       }
     }
   #endif
@@ -271,8 +280,7 @@ void Limits::stopAxis2(GuideAction stopDirection) {
 }
 
 void Limits::poll() {
-  static int autoFlipDelayCycles = 0;
-  if (autoFlipDelayCycles > 0) autoFlipDelayCycles--;
+  if (limitsDisablePeriodDs > 0) limitsDisablePeriodDs--;
 
   LimitsError lastError = error;
 
@@ -287,9 +295,24 @@ void Limits::poll() {
 
   if (limitsEnabled && guide.state != GU_HOME_GUIDE && guide.state != GU_HOME_GUIDE_ABORT) {
     // overhead and horizon limits
-    if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+    // For FORK mounts, horizon limit is in DEC space (mechanical limit), not altitude space
+    if (limitsDisablePeriodDs == 0) {
+      if (transform.mountType == FORK && transform.isEquatorial()) {
+        if (current.d < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+      } else {
+        if (current.a < settings.altitude.min) error.altitude.min = true; else error.altitude.min = false;
+      }
+    } else {
+      error.altitude.min = false;
+    }
+
+    // For FORK mounts, overhead limit is in DEC space (mechanical limit), not altitude space
     if (fabs(settings.altitude.max - Deg90) > OneArcSec) {
-      if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      if (transform.mountType == FORK && transform.isEquatorial()) {
+        if (current.d > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      } else {
+        if (current.a > settings.altitude.max) error.altitude.max = true; else error.altitude.max = false;
+      }
     } else error.altitude.max = false;
 
     // meridian limits
@@ -301,11 +324,10 @@ void Limits::poll() {
     } else error.meridian.east = false;
 
     if (transform.mountType == GEM && current.pierSide == PIER_SIDE_WEST) {
-      if (current.h > settings.pastMeridianW && autoFlipDelayCycles == 0) {
+      if (current.h > settings.pastMeridianW && limitsDisablePeriodDs == 0) {
         #if GOTO_FEATURE == ON && AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
           if (goTo.isAutoFlipEnabled() && mount.isTracking()) {
-            // disable this limit for a second to allow goto to exit the out of limits region
-            autoFlipDelayCycles = 10;
+            limitsDisablePeriod(1.0F);
             VLF("MSG: Mount, start automatic meridian flip");
             Coordinate target = mount.getMountPosition();
             CommandError e = goTo.request(target, PSS_EAST_ONLY, false);
@@ -347,11 +369,10 @@ void Limits::poll() {
       // ---------------------------------------------------------
     } else error.limit.axis1.min = false;
 
-    if (fgt(current.a1, axis1.getLimitMax()) && autoFlipDelayCycles == 0) {
+    if (fgt(current.a1, axis1.getLimitMax()) && limitsDisablePeriodDs == 0) {
       #if GOTO_FEATURE == ON && AXIS1_SECTOR_GEAR == OFF && AXIS2_TANGENT_ARM == OFF
         if (current.pierSide == PIER_SIDE_EAST && goTo.isAutoFlipEnabled() && mount.isTracking()) {
-          // disable this limit for a second to allow goto to exit the out of limits region
-          autoFlipDelayCycles = 10;
+          limitsDisablePeriod(1.0F);
           VLF("MSG: Mount, start automatic meridian flip");
           Coordinate target = mount.getMountPosition();
           CommandError e = goTo.request(target, PSS_WEST_ONLY, false);
@@ -450,7 +471,12 @@ void Limits::poll() {
   if (transform.mountType == ALTAZM) {
     if (error.altitude.min) stopAxis2(GA_REVERSE);
     if (error.altitude.max) stopAxis2(GA_FORWARD);
+  } else if (transform.mountType == FORK && transform.isEquatorial()) {
+    // For FORK mounts, allow movement away from DEC limits
+    if (error.altitude.min) stopAxis2(GA_REVERSE);  // Stop moving toward more negative DEC
+    if (error.altitude.max) stopAxis2(GA_FORWARD);  // Stop moving toward more positive DEC
   } else {
+    // For GEM mounts, stop all movement when hitting altitude limits
     if (!lastError.altitude.min && error.altitude.min) stop();
     if (!lastError.altitude.max && error.altitude.max) stop();
   }

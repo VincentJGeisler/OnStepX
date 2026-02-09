@@ -20,7 +20,7 @@ class Status {
     // mount status wake on demand
     void wake();
 
-    bool command(char *reply, char *command, char *parameter, bool *supressFrame, bool *numericReply, CommandError *commandError);
+    bool command(char *reply, char *command, char *parameter, bool *suppressFrame, bool *numericReply, CommandError *commandError);
 
     // mount status LED flash rate (in ms)
     void flashRate(int period);
@@ -32,6 +32,7 @@ class Status {
     inline void soundBeep() { if (sound.enabled) wake(); sound.beep(); }
     inline void soundClick() { if (sound.enabled) wake(); sound.click(); }
     inline void soundToggleEnable() { sound.enabled = !sound.enabled; }
+    void soundStartupMelody();
 
   private:
     uint8_t statusTaskHandle = 0;

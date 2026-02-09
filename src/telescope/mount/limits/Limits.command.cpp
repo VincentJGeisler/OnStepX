@@ -12,8 +12,8 @@
 #include "../Mount.h"
 #include "../site/Site.h"
 
-bool Limits::command(char *reply, char *command, char *parameter, bool *supressFrame, bool *numericReply, CommandError *commandError) {
-  *supressFrame = false;
+bool Limits::command(char *reply, char *command, char *parameter, bool *suppressFrame, bool *numericReply, CommandError *commandError) {
+  *suppressFrame = false;
   
   if (command[0] == 'G') {
     // :Gh#       Get Horizon Limit, the minimum elevation of the mount relative to the horizon
@@ -56,7 +56,8 @@ bool Limits::command(char *reply, char *command, char *parameter, bool *supressF
     if (command[1] == 'h') {
       int16_t deg;
       if (convert.atoi2(parameter, &deg)) {
-        if (deg >= -30.0F && deg <= 30.0F) {
+        // Allow wider horizon limits on FORK mounts to support parking below horizon
+        if ((MOUNT_TYPE == FORK && deg >= -90.0F && deg <= 30.0F) || (deg >= -30.0F && deg <= 30.0F)) {
           settings.altitude.min = degToRadF(deg);
           nv.updateBytes(NV_MOUNT_LIMITS_BASE, &settings, sizeof(LimitSettings));
         } else *commandError = CE_PARAM_RANGE;
@@ -65,12 +66,16 @@ bool Limits::command(char *reply, char *command, char *parameter, bool *supressF
 
     //  :So[DD]#
     //            Set the overhead elevation limit in degrees relative to the horizon
+    //            For FORK mounts: limit is in DEC space (0 to 90 degrees)
+    //            For other mounts: limit is in altitude space (60 to 90 degrees)
     //            Return: 0 on failure
     //                    1 on success
     if (command[1] == 'o') {
       int16_t deg;
       if (convert.atoi2(parameter, &deg)) {
-        if (deg >= 60.0F && deg <= 90.0F) {
+        // For FORK mounts, overhead limit is in DEC space (mechanical limit): 0° to 90°
+        // For other mounts, overhead limit is in altitude space: 60° to 90°
+        if ((MOUNT_TYPE == FORK && deg >= 0.0F && deg <= 90.0F) || (deg >= 60.0F && deg <= 90.0F)) {
           settings.altitude.max = degToRadF(deg);
           nv.updateBytes(NV_MOUNT_LIMITS_BASE, &settings, sizeof(LimitSettings));
         } else *commandError = CE_PARAM_RANGE;

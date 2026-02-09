@@ -95,6 +95,11 @@ void Mount::begin() {
   library.init();
   park.init();
 
+  // enable limits if mount is unparked (prevents tracking lockout after power cycle)
+  #if GOTO_FEATURE == ON
+    if (park.state == PS_UNPARKED) limits.enabled(true);
+  #endif
+
   #if AXIS1_PEC == ON
     pec.init();
   #endif
@@ -106,6 +111,7 @@ void Mount::begin() {
   tracking(false);
 
   // restore where we were pointing
+  bool positionRestored = false;
   #if MOUNT_COORDS_MEMORY == ON
     if (!goTo.absoluteEncodersPresent && park.state != PS_PARKED) {
       int8_t lastMountType = nv.readC(NV_MOUNT_LAST_POSITION);
@@ -116,9 +122,25 @@ void Mount::begin() {
         axis1.setInstrumentCoordinate(a1);
         axis2.setInstrumentCoordinate(a2);
         if (!goTo.absoluteEncodersPresent) mount.syncFromOnStepToEncoders = true;
+        positionRestored = true;
       }
     }
   #endif
+
+  // if no saved position exists, set a sensible default: HA=0 (LST), DEC=-89
+  if (!goTo.absoluteEncodersPresent && !positionRestored && transform.isEquatorial()) {
+    VLF("MSG: Mount, setting default position (HA=0, DEC=-89)");
+    Coordinate defaultPos;
+    defaultPos.h = 0.0L;  // Hour Angle = 0 (on meridian, at LST)
+    defaultPos.d = degToRad(-89.0L);  // Declination = -89 (close to -90, avoiding singularity)
+    defaultPos.pierSide = PIER_SIDE_EAST;
+    
+    double a1, a2;
+    transform.mountToInstrument(&defaultPos, &a1, &a2);
+    axis1.setInstrumentCoordinatePark(a1);
+    axis2.setInstrumentCoordinatePark(a2);
+    mount.syncFromOnStepToEncoders = true;
+  }
 
   #if ALIGN_MAX_NUM_STARS > 1 && ALIGN_MODEL_MEMORY == ON
     transform.align.modelRead();

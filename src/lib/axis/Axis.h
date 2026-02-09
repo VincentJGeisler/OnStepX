@@ -44,6 +44,7 @@
 #include "motor/Motor.h"
 #include "motor/stepDir/StepDir.h"
 #include "motor/servo/Servo.h"
+#include "motor/oDrive/ODriveNew.h"
 #include "motor/oDrive/ODrive.h"
 #include "motor/kTech/KTech.h"
 
@@ -132,7 +133,7 @@ public:
   Axis(uint8_t axisNumber, const AxisPins *pins, const AxisSettings *settings, const AxisMeasure axisMeasure, float targetTolerance = 0.0F);
 
   // process axis commands
-  bool command(char *reply, char *command, char *parameter, bool *supressFrame, bool *numericReply, CommandError *commandError);
+  bool command(char *reply, char *command, char *parameter, bool *suppressFrame, bool *numericReply, CommandError *commandError);
 
   // init prepares this motion controller and the provided motor for operation
   // \param motor: associated motor to be controlled
