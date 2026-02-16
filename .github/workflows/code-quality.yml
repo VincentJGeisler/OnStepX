@@ -1,0 +1,266 @@
+name: Code Hygiene
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday
+
+jobs:
+  dead-code-detection:
+    name: Dead Code & Unused Symbols
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      
+      - name: Find unused functions
+        run: |
+          echo "=== Checking for unused functions ==="
+          cppcheck \
+            --enable=unusedFunction \
+            --suppress=missingIncludeSystem \
+            --inline-suppr \
+            --error-exitcode=0 \
+            --std=c++11 \
+            -I src \
+            -I src/HAL \
+            -I src/lib \
+            src/ \
+            2>&1 | tee unused-functions.txt
+          
+          if grep -q "unusedFunction" unused-functions.txt; then
+            echo "⚠️ Found unused functions - review for removal"
+          else
+            echo "✓ No unused functions detected"
+          fi
+        continue-on-error: true
+      
+      - name: Find orphaned header files
+        run: |
+          echo "=== Checking for orphaned .h files ==="
+          for header in $(find src -name "*.h" -type f); do
+            basename=$(basename "$header" .h)
+            cpp_file="${header%.h}.cpp"
+            
+            # Check if corresponding .cpp exists
+            if [ ! -f "$cpp_file" ]; then
+              # Check if header is included anywhere
+              if ! grep -r --include="*.cpp" --include="*.h" --include="*.ino" -q "$(basename $header)" .; then
+                echo "⚠️ Potentially orphaned: $header"
+              fi
+            fi
+          done
+        continue-on-error: true
+      
+      - name: Upload dead code report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dead-code-report
+          path: unused-functions.txt
+
+  duplicate-detection:
+    name: Duplicate & Redundant Code
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install PMD CPD
+        run: |
+          wget https://github.com/pmd/pmd/releases/download/pmd_releases%2F7.0.0/pmd-dist-7.0.0-bin.zip
+          unzip -q pmd-dist-7.0.0-bin.zip
+      
+      - name: Detect duplicate code blocks
+        run: |
+          echo "=== Checking for duplicate code (>50 tokens) ==="
+          ./pmd-bin-7.0.0/bin/pmd cpd \
+            --minimum-tokens 50 \
+            --language cpp \
+            --files src \
+            --format text \
+            2>&1 | tee duplicates-report.txt || true
+          
+          if [ -s duplicates-report.txt ]; then
+            echo "⚠️ Found duplicate code blocks - consider consolidation"
+          else
+            echo "✓ No significant duplicates detected"
+          fi
+        continue-on-error: true
+      
+      - name: Find similar function names
+        run: |
+          echo "=== Checking for suspiciously similar function names ==="
+          # Extract function definitions and look for patterns
+          grep -rh --include="*.cpp" --include="*.h" -E "^[a-zA-Z_][a-zA-Z0-9_]*\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(" src/ | \
+            sed 's/(.*//' | \
+            sort | \
+            uniq -c | \
+            sort -rn | \
+            head -20 > similar-functions.txt
+          
+          echo "Top function name patterns (review for redundancy):"
+          cat similar-functions.txt
+        continue-on-error: true
+      
+      - name: Upload duplicate code report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duplicate-code-report
+          path: |
+            duplicates-report.txt
+            similar-functions.txt
+
+  static-analysis:
+    name: Static Analysis & Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      
+      - name: Run cppcheck
+        run: |
+          cppcheck \
+            --enable=warning,style,performance,portability \
+            --suppress=missingIncludeSystem \
+            --inline-suppr \
+            --error-exitcode=0 \
+            --std=c++11 \
+            --platform=unix32 \
+            -I src \
+            -I src/HAL \
+            -I src/lib \
+            src/ \
+            2>&1 | tee cppcheck-report.txt
+        continue-on-error: true
+      
+      - name: Check for empty catch blocks
+        run: |
+          echo "=== Checking for empty catch blocks ==="
+          grep -rn --include="*.cpp" -A 2 "catch" src/ | \
+            grep -B 1 "^\s*}\s*$" | \
+            grep "catch" || echo "✓ No obvious empty catch blocks"
+        continue-on-error: true
+      
+      - name: Upload static analysis report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: static-analysis-report
+          path: cppcheck-report.txt
+
+  syntax-check:
+    name: C++ Syntax Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install g++
+        run: sudo apt-get update && sudo apt-get install -y g++
+      
+      - name: Syntax check source files
+        run: |
+          echo "Checking C++ syntax..."
+          find src -name '*.cpp' -type f | while read file; do
+            echo "Checking $file"
+            g++ -std=c++11 -fsyntax-only -I. -Isrc -Isrc/HAL -Isrc/lib "$file" 2>&1 || true
+          done
+        continue-on-error: true
+
+  config-drift:
+    name: Configuration Drift Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for TODO/FIXME comments
+        run: |
+          echo "=== Checking for TODO/FIXME markers ==="
+          grep -rn --include="*.cpp" --include="*.h" --include="*.ino" -E "(TODO|FIXME|HACK|XXX)" src/ || echo "✓ No TODO markers found"
+        continue-on-error: true
+      
+      - name: Check for commented-out code blocks
+        run: |
+          echo "=== Checking for large commented code blocks ==="
+          # Find files with >5 consecutive comment lines (potential dead code)
+          for file in $(find src -name "*.cpp" -o -name "*.h"); do
+            awk '/^[[:space:]]*\/\// {count++} !/^[[:space:]]*\/\// {if(count>5) print FILENAME":"NR-count"-"NR; count=0}' "$file"
+          done | head -20
+        continue-on-error: true
+      
+      - name: Check for debug statements
+        run: |
+          echo "=== Checking for debug print statements ==="
+          grep -rn --include="*.cpp" -E "(Serial\.print|printf.*debug|DEBUG_PRINT)" src/ | head -20 || echo "✓ No debug prints found"
+        continue-on-error: true
+
+  formatting-check:
+    name: Code Formatting Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      
+      - name: Check formatting
+        run: |
+          find src -name '*.cpp' -o -name '*.h' | xargs clang-format --dry-run --Werror
+        continue-on-error: true
+
+  line-endings:
+    name: Line Ending Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Check for CRLF
+        run: |
+          if git ls-files --eol | grep 'i/crlf'; then
+            echo "Warning: CRLF line endings detected"
+            exit 0
+          else
+            echo "All files use LF line endings"
+          fi
+
+  summary:
+    name: Hygiene Summary
+    runs-on: ubuntu-latest
+    needs: [dead-code-detection, duplicate-detection, static-analysis, syntax-check, config-drift, formatting-check, line-endings]
+    if: always()
+    
+    steps:
+      - name: Generate summary
+        run: |
+          echo "# Code Hygiene Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ All hygiene checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Review individual job results for:" >> $GITHUB_STEP_SUMMARY
+          echo "- Dead code and unused functions" >> $GITHUB_STEP_SUMMARY
+          echo "- Duplicate/redundant code blocks" >> $GITHUB_STEP_SUMMARY
+          echo "- Static analysis warnings" >> $GITHUB_STEP_SUMMARY
+          echo "- Configuration drift" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Download artifacts for detailed reports" >> $GITHUB_STEP_SUMMARY
