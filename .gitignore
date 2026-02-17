@@ -1,13 +1,42 @@
-.vscode/settings.json
-*.json
-__vm/*
-*.vcxproj*
-.vs/*
-*.sln
-Debug/*
-Release/*
-debug.cfg
-esp32.svd
-src/plugins/*
-debug.svd
-z.*
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Local hygiene check files
+BUGS.md
+hygiene-findings.md
+hygiene-*.txt
+run-hygiene-checks.ps1
+
+# Personal breadcrumb files
+*-breadcrumb.md
+cursor-fired.md
