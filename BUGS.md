@@ -1,10 +1,12 @@
 # Bug Tracking - OnStepX Fork
 
-## Critical Bugs (High Priority)
+All bugs are now tracked in GitHub Issues: https://github.com/VincentJGeisler/OnStepX/issues
+
+## Fixed Bugs (Closed Issues)
 
 ### Bug #1: Uninitialized variable in Calendars.cpp
 **Severity:** High  
-**Status:** Open  
+**Status:** Fixed (Issue #1)  
 **Location:** `src/lib/calendars/Calendars.cpp:68`
 
 **Issue:**
@@ -16,8 +18,8 @@ return date;
 **Impact:**  
 Returning uninitialized `date.valid` could cause undefined behavior when checking calendar date validity.
 
-**Action Required:**  
-Review Calendars.cpp to ensure `date.valid` is properly initialized before return.
+**Resolution:**  
+Fixed in commit b8507dcf by initializing `date.valid = true;` before return.
 
 **Found by:** cppcheck static analysis (Code hygiene CI)
 
@@ -25,7 +27,7 @@ Review Calendars.cpp to ensure `date.valid` is properly initialized before retur
 
 ### Bug #2: Uninitialized mount coordinates in Transform.cpp
 **Severity:** High  
-**Status:** Open  
+**Status:** Fixed (Issue #2)  
 **Location:** `src/telescope/mount/coordinates/Transform.cpp:194`
 
 **Issue:**
@@ -37,8 +39,8 @@ return mount;
 **Impact:**  
 Coordinate transformation could use uninitialized data, leading to incorrect telescope positioning or crashes.
 
-**Action Required:**  
-Review Transform.cpp coordinate initialization logic. Ensure all mount structure fields are initialized before return, especially in edge cases.
+**Resolution:**  
+Fixed in commit b8507dcf by zero-initializing the structure: `Coordinate mount = {0};`
 
 **Found by:** cppcheck static analysis (Code hygiene CI)
 
@@ -46,8 +48,8 @@ Review Transform.cpp coordinate initialization logic. Ensure all mount structure
 
 ### Bug #3: Uninitialized goto target in Library.command.cpp
 **Severity:** Medium  
-**Status:** Open  
-**Location:** `src/telescope/mount/library/Library.command.cpp:57`
+**Status:** Fixed (Issue #3)  
+**Location:** `src/telescope/mount/library/Library.command.cpp` (lines 42, 55, 67)
 
 **Issue:**
 ```
@@ -58,18 +60,16 @@ goTo.setGotoTarget(&target);
 **Impact:**  
 Goto target might have uninitialized coordinate fields, potentially causing incorrect slew operations.
 
-**Action Required:**  
-Review library command coordinate initialization. Ensure target structure is fully initialized before passing to setGotoTarget().
+**Resolution:**  
+Fixed in commit b8507dcf by zero-initializing all three instances: `Coordinate target = {0};`
 
 **Found by:** cppcheck static analysis (Code hygiene CI)
 
 ---
 
-## Fixed Bugs
-
 ### Bug #4: Missing HAL include for Arduino M0
 **Severity:** High  
-**Status:** Fixed (commit e4db2b68)  
+**Status:** Fixed (Issue #4)  
 **Location:** `src/HAL/HAL.h:54`
 
 **Issue:**  
@@ -87,6 +87,7 @@ Changed include from `HAL_ZERO.h` to `arduinoM0/ArduinoM0.h`
 
 ## Notes
 
-- To enable GitHub Issues on this fork, go to Settings → Features → Issues
-- These bugs exist in upstream (hjd1964/OnStepX) as well
-- Consider reporting critical bugs upstream after verification
+- ✓ GitHub Issues enabled and tracking bugs
+- All fixes committed to ci-hygiene-testing branch (commits e4db2b68 and b8507dcf)
+- These bugs exist in upstream (hjd1964/OnStepX) as well - consider reporting upstream
+- Issue #111 was accidentally created in upstream repo (hjd1964/OnStepX) - same as our Issue #1
