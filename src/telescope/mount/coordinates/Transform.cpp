@@ -162,7 +162,7 @@ void Transform::topocentricToObservedPlace(Coordinate *coord) {
 }
 
 Coordinate Transform::instrumentToMount(double a1, double a2) {
-  Coordinate mount;
+  Coordinate mount = {0};
 
   #if AXIS2_TANGENT_ARM_CORRECTION == ON
     a2 = TANGENT_ARM_INSTRUMENT_TO_MOUNT(a2)

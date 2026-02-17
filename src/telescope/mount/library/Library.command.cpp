@@ -52,7 +52,7 @@ bool Library::command(char *reply, char *command, char *parameter, bool *suppres
       //            Returns: Nothing
       if (command[1] == 'I' && parameter[0] == 'G' && parameter[1] == 0) {
         int i;
-        Coordinate target;
+        Coordinate target = {0};
         readVars(reply, &i, &target.r, &target.d);
         goTo.setGotoTarget(&target);
         *numericReply = false;
