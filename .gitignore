@@ -40,3 +40,6 @@ run-hygiene-checks.ps1
 # Personal breadcrumb files
 *-breadcrumb.md
 cursor-fired.md
+
+# Kiro specs and workspace files (private knowledge)
+.kiro/
