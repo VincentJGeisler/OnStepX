@@ -30,16 +30,5 @@
 *.exe
 *.out
 *.app
-
-# Local hygiene check files
-BUGS.md
-hygiene-findings.md
-hygiene-*.txt
-run-hygiene-checks.ps1
-
-# Personal breadcrumb files
-*-breadcrumb.md
-cursor-fired.md
-
-# Kiro specs and workspace files (private knowledge)
-.kiro/
+#github flows
+.github
