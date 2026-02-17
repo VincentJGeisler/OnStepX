@@ -64,6 +64,7 @@ GregorianDate Calendars::julianDayToGregorian(JulianDate julianDate) {
   if (G < 13.5)         date.month = floor(G - 1.0);    else date.month = floor(G - 13.0);
   if (date.month > 2.5) date.year  = floor(D - 4716.0); else date.year  = floor(D - 4715.0);
   date.hour = 0.0;
+  date.valid = true;
 
   return date;
 }
