@@ -168,28 +168,49 @@ bool Status::command(char *reply, char *command, char *parameter, bool *suppress
 
   } else
 
-  // :SX97,[n]#     Set buzzer state
-  //                Return: see below
-  if (command[0] == 'S' && command[1] == 'X' && parameter[0] == '9' && parameter[1] == '7'  && parameter[2] == ','  && parameter[4] == 0) {
-    switch (parameter[3]) {
-      case '0': case '1':
-        sound.enabled = parameter[3] - '0';
-        #if STATUS_BUZZER_MEMORY == ON
-          nv.write(NV_MOUNT_STATUS_BASE, (uint8_t)sound.enabled);
-        #endif
-      break;
-      case '2':
-        soundBeep();
-      break;
-      case '3':
-        soundAlert();
-      break;
-      case '4':
-        soundClick();
-      break;
-      default:
+  // :SX97,[n]# or :SX97,5,[duration]#
+  //                Set buzzer state or custom duration beep
+  //                Return: 0 on failure, 1 on success
+  if (command[0] == 'S' && command[1] == 'X' && parameter[0] == '9' && parameter[1] == '7' && parameter[2] == ',') {
+    // Simple format: :SX97,n# (single digit parameter)
+    if (parameter[4] == 0) {
+      switch (parameter[3]) {
+        case '0': case '1':
+          sound.enabled = parameter[3] - '0';
+          #if STATUS_BUZZER_MEMORY == ON
+            nv.write(NV_MOUNT_STATUS_BASE, (uint8_t)sound.enabled);
+          #endif
+        break;
+        case '2':
+          soundBeep();
+        break;
+        case '3':
+          soundAlert();
+        break;
+        case '4':
+          soundClick();
+        break;
+        default:
+          *commandError = CE_PARAM_RANGE;
+        break;
+      }
+    }
+    // Custom duration format: :SX97,5,duration#
+    else if (parameter[3] == '5' && parameter[4] == ',') {
+      int duration = atoi(&parameter[5]);
+      
+      // Validate duration range
+      if (duration >= 10 && duration <= 2000) {
+        if (sound.enabled) {
+          wake();  // Wake system if sleeping
+          sound.customBeep(duration);
+        }
+        // Return success even if buzzer disabled (command processed)
+      } else {
         *commandError = CE_PARAM_RANGE;
-      break;
+      }
+    } else {
+      *commandError = CE_PARAM_FORM;
     }
   } else return false;
 
