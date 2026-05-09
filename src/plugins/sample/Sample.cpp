@@ -2,7 +2,7 @@
 
 #include "Sample.h"
 #include "../../Common.h"
-#include "../../lib/serial/Serial_Local.h"
+#include "../../libApp/commands/CommandBroker.h"
 #include "../../lib/tasks/OnTask.h"
 
 void sampleWrapper() { sample.loop(); }
@@ -16,18 +16,37 @@ void Sample::init() {
 }
 
 void Sample::loop() {
-  SERIAL_LOCAL.transmit(":GR#");
-  // let OnStepX run for 0.1 second to process the command
-  tasks.yield(100);
-  Serial.print("RA = ");
-  Serial.println(SERIAL_LOCAL.receive());
+  static uint8_t raRequest = 0;
+  static uint8_t decRequest = 0;
+  char reply[40];
 
-  SERIAL_LOCAL.transmit(":GD#");
-  tasks.yield(100);
-  Serial.print("Dec=");
-  Serial.println(SERIAL_LOCAL.receive());
+  if (!raRequest) raRequest = commandBroker.request(":GR#");
 
-  Serial.println();
+  switch (commandBroker.result(raRequest, reply, sizeof(reply))) {
+    case CB_DONE:
+      Serial.print("RA = ");
+      Serial.println(reply);
+    break;
+    case CB_TIMEOUT:
+      Serial.println("RA = ?");
+    break;
+    default:
+    break;
+  }
+
+  if (!decRequest) decRequest = commandBroker.request(":GD#");
+
+  switch (commandBroker.result(decRequest, reply, sizeof(reply))) {
+    case CB_DONE:
+      Serial.print("Dec=");
+      Serial.println(reply);
+    break;
+    case CB_TIMEOUT:
+      Serial.println("Dec=?");
+    break;
+    default:
+    break;
+  }
 }
 
 // no command processing in this example, so just return false (not handled)

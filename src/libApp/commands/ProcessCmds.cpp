@@ -14,6 +14,9 @@
   #endif
   #include "../../lib/serial/Serial_Local.h"
 #endif
+#ifdef SERIAL_LOCAL
+  #include "CommandBroker.h"
+#endif
 
 #if DEBUG != OFF
   #define L_CE_NONE                    "no errors"
@@ -302,5 +305,6 @@ void commandChannelInit() {
   #ifdef SERIAL_LOCAL
     VF("MSG: System, start command channel Local task (priority 5)... ");
     if (tasks.add(3, 0, true, 5, processCmdsLocal, "SysCmdL")) { VLF("success"); } else { VLF("FAILED!"); }
+    commandBroker.init();
   #endif
 }
