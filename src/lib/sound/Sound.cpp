@@ -64,4 +64,17 @@ void Sound::click() {
   }
 }
 
+void Sound::customBeep(int durationMs) {
+  if (ready && enabled) {
+    #if STATUS_BUZZER == ON
+      digitalWriteEx(STATUS_BUZZER_PIN, STATUS_BUZZER_ON_STATE);
+      if (_buzzerHandle) tasks.remove(_buzzerHandle);
+      _buzzerHandle = tasks.add(durationMs, 0, false, 6, buzzerOff);
+    #endif
+    #if STATUS_BUZZER >= 0
+      tone(STATUS_BUZZER_PIN, STATUS_BUZZER, durationMs);
+    #endif
+  }
+}
+
 #endif
